@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Live Voting</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>Live Voting Admin</h1>
+            <div class="active-users-display">
+                <span class="active-users-label">Active Users:</span>
+                <span id="active-users-count" class="active-users-count">0</span>
+            </div>
+        </div>
+        
+        <div class="admin-content">
+            <div class="admin-section">
+                <h2>Create New Question</h2>
+                <form id="question-form">
+                    <div class="form-group">
+                        <label for="question-input">Question:</label>
+                        <input type="text" id="question-input" placeholder="Enter your question" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Answers:</label>
+                        <div id="answers-input-container">
+                            <div class="answer-input-row">
+                                <input type="text" class="answer-input" placeholder="Answer option" required>
+                                <button type="button" class="remove-answer-btn" onclick="removeAnswer(this)">×</button>
+                            </div>
+                            <div class="answer-input-row">
+                                <input type="text" class="answer-input" placeholder="Answer option" required>
+                                <button type="button" class="remove-answer-btn" onclick="removeAnswer(this)">×</button>
+                            </div>
+                        </div>
+                        <button type="button" id="add-answer-btn" class="add-answer-btn">+ Add Answer</button>
+                    </div>
+                    <button type="submit" class="submit-btn">Create Question</button>
+                </form>
+            </div>
+            
+            <div class="admin-section">
+                <h2>Questions</h2>
+                <div id="questions-list"></div>
+            </div>
+            
+            <div class="admin-section">
+                <h2>Current Question Control</h2>
+                <div class="current-question-controls">
+                    <button id="prev-question-btn" class="control-btn">← Previous</button>
+                    <span id="current-question-display" class="current-question-display">No question selected</span>
+                    <button id="next-question-btn" class="control-btn">Next →</button>
+                </div>
+                <div id="current-votes-display" class="votes-display"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
+

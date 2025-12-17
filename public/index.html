@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Voting</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div id="waiting-screen" class="screen">
+            <div class="waiting-content">
+                <h1>Waiting for Question</h1>
+                <p>Please wait for the next question to appear...</p>
+                <div class="spinner"></div>
+            </div>
+        </div>
+        
+        <div id="question-screen" class="screen hidden">
+            <div class="question-content">
+                <h1 id="question-text"></h1>
+                <div id="answers-container"></div>
+                <div id="vote-status" class="vote-status"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="user.js"></script>
+</body>
+</html>
+
