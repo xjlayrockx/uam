@@ -1,10 +1,47 @@
 const socket = io();
 
+// UAM Men's Basketball Roster Players
+const UAM_PLAYERS = [
+    'Lamont Jackson',
+    'Giancarlo Valdez',
+    'Gianssen Valdez',
+    'Felix Smedjeback',
+    'Isaac Jackson',
+    'Josh Smith',
+    'Giancarlo Bastianoni',
+    'Elem Shelby',
+    'Jakob Zenon',
+    'Charles Temple',
+    'Bryson Hammond',
+    'Tyler Webb',
+    'Ashton Price',
+    'Jackson Edwards'
+];
+
 let questions = [];
 let currentQuestionIndex = -1;
 let currentVotes = {};
 
+// Initialize player checkboxes
+function initializePlayerCheckboxes() {
+    const container = document.getElementById('players-checkbox-container');
+    container.innerHTML = '';
+    
+    UAM_PLAYERS.forEach((player, index) => {
+        const checkboxRow = document.createElement('div');
+        checkboxRow.className = 'player-checkbox-row';
+        checkboxRow.innerHTML = `
+            <label class="player-checkbox-label">
+                <input type="checkbox" class="player-checkbox" value="${player}" checked>
+                <span>${player}</span>
+            </label>
+        `;
+        container.appendChild(checkboxRow);
+    });
+}
+
 // Load initial data
+initializePlayerCheckboxes();
 loadQuestions();
 loadCurrentQuestion();
 
@@ -33,15 +70,19 @@ document.getElementById('question-form').addEventListener('submit', async (e) =>
     e.preventDefault();
     
     const questionInput = document.getElementById('question-input');
-    const answerInputs = document.querySelectorAll('.answer-input');
+    const playerCheckboxes = document.querySelectorAll('.player-checkbox:checked');
     
     const question = questionInput.value.trim();
-    const answers = Array.from(answerInputs)
-        .map(input => input.value.trim())
-        .filter(answer => answer.length > 0);
+    const answers = Array.from(playerCheckboxes)
+        .map(checkbox => checkbox.value);
     
-    if (question.length === 0 || answers.length < 2) {
-        alert('Please enter a question and at least 2 answers');
+    if (question.length === 0) {
+        alert('Please enter a question');
+        return;
+    }
+    
+    if (answers.length < 2) {
+        alert('Please select at least 2 players as answer options');
         return;
     }
     
@@ -58,8 +99,13 @@ document.getElementById('question-form').addEventListener('submit', async (e) =>
             const newQuestion = await response.json();
             questions.push(newQuestion);
             questionInput.value = '';
-            answerInputs.forEach(input => input.value = '');
+            // Reset all checkboxes to checked
+            document.querySelectorAll('.player-checkbox').forEach(cb => cb.checked = true);
             updateQuestionsList();
+            
+            // Automatically set the new question as current
+            const newIndex = questions.length - 1;
+            await setCurrentQuestion(newIndex);
         } else {
             alert('Failed to create question');
         }
@@ -69,27 +115,15 @@ document.getElementById('question-form').addEventListener('submit', async (e) =>
     }
 });
 
-// Add answer input
-document.getElementById('add-answer-btn').addEventListener('click', () => {
-    const container = document.getElementById('answers-input-container');
-    const row = document.createElement('div');
-    row.className = 'answer-input-row';
-    row.innerHTML = `
-        <input type="text" class="answer-input" placeholder="Answer option" required>
-        <button type="button" class="remove-answer-btn" onclick="removeAnswer(this)">×</button>
-    `;
-    container.appendChild(row);
+// Select all players
+document.getElementById('select-all-players-btn').addEventListener('click', () => {
+    document.querySelectorAll('.player-checkbox').forEach(cb => cb.checked = true);
 });
 
-// Remove answer input
-window.removeAnswer = function(btn) {
-    const container = document.getElementById('answers-input-container');
-    if (container.children.length > 1) {
-        btn.parentElement.remove();
-    } else {
-        alert('You need at least one answer option');
-    }
-};
+// Deselect all players
+document.getElementById('deselect-all-players-btn').addEventListener('click', () => {
+    document.querySelectorAll('.player-checkbox').forEach(cb => cb.checked = false);
+});
 
 // Question navigation
 document.getElementById('prev-question-btn').addEventListener('click', () => {
@@ -191,16 +225,25 @@ function updateQuestionsList() {
     questions.forEach((question, index) => {
         const item = document.createElement('div');
         item.className = `question-item ${index === currentQuestionIndex ? 'current' : ''}`;
+        const isCurrent = index === currentQuestionIndex;
         item.innerHTML = `
             <div class="question-item-content">
                 <h3>${question.question}</h3>
-                <p>${question.answers.length} answer(s)</p>
+                <p>${question.answers.length} answer(s) ${isCurrent ? '<strong style="color: #006633;">(Currently Active)</strong>' : ''}</p>
             </div>
-            <button class="delete-question-btn" onclick="deleteQuestion('${question.id}')">Delete</button>
+            <div class="question-item-actions">
+                ${!isCurrent ? `<button class="activate-question-btn" onclick="activateQuestion(${index})">Set as Active</button>` : ''}
+                <button class="delete-question-btn" onclick="deleteQuestion('${question.id}')">Delete</button>
+            </div>
         `;
         container.appendChild(item);
     });
 }
+
+// Activate question (set as current)
+window.activateQuestion = async function(index) {
+    await setCurrentQuestion(index);
+};
 
 // Delete question
 window.deleteQuestion = async function(questionId) {

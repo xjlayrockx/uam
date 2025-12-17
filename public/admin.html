@@ -9,10 +9,12 @@
 <body>
     <div class="admin-container">
         <div class="admin-header">
-            <h1>Live Voting Admin</h1>
-            <div class="active-users-display">
-                <span class="active-users-label">Active Users:</span>
-                <span id="active-users-count" class="active-users-count">0</span>
+            <div class="admin-header-content">
+                <h1>UAM Live Voting - Admin</h1>
+                <div class="active-users-display">
+                    <span class="active-users-label">Active Users:</span>
+                    <span id="active-users-count" class="active-users-count">0</span>
+                </div>
             </div>
         </div>
         
@@ -25,18 +27,11 @@
                         <input type="text" id="question-input" placeholder="Enter your question" required>
                     </div>
                     <div class="form-group">
-                        <label>Answers:</label>
-                        <div id="answers-input-container">
-                            <div class="answer-input-row">
-                                <input type="text" class="answer-input" placeholder="Answer option" required>
-                                <button type="button" class="remove-answer-btn" onclick="removeAnswer(this)">×</button>
-                            </div>
-                            <div class="answer-input-row">
-                                <input type="text" class="answer-input" placeholder="Answer option" required>
-                                <button type="button" class="remove-answer-btn" onclick="removeAnswer(this)">×</button>
-                            </div>
-                        </div>
-                        <button type="button" id="add-answer-btn" class="add-answer-btn">+ Add Answer</button>
+                        <label>Select Players (Answers):</label>
+                        <div class="players-selection-info">Select which players should be answer options for this question</div>
+                        <div id="players-checkbox-container" class="players-checkbox-container"></div>
+                        <button type="button" id="select-all-players-btn" class="select-all-btn">Select All</button>
+                        <button type="button" id="deselect-all-players-btn" class="select-all-btn">Deselect All</button>
                     </div>
                     <button type="submit" class="submit-btn">Create Question</button>
                 </form>
