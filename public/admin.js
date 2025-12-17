@@ -1,26 +1,28 @@
 const socket = io();
 
-// UAM Men's Basketball Roster Players
+// UAM Men's Basketball Roster Players (alphabetically sorted)
 const UAM_PLAYERS = [
-    'Lamont Jackson',
+    'Ashton Price',
+    'Bryson Hammond',
+    'Charles Temple',
+    'Elem Shelby',
+    'Felix Smedjeback',
+    'Giancarlo Bastianoni',
     'Giancarlo Valdez',
     'Gianssen Valdez',
-    'Felix Smedjeback',
     'Isaac Jackson',
-    'Josh Smith',
-    'Giancarlo Bastianoni',
-    'Elem Shelby',
+    'Jackson Edwards',
     'Jakob Zenon',
-    'Charles Temple',
-    'Bryson Hammond',
-    'Tyler Webb',
-    'Ashton Price',
-    'Jackson Edwards'
+    'Josh Smith',
+    'Lamont Jackson',
+    'Tyler Webb'
 ];
 
 let questions = [];
 let currentQuestionIndex = -1;
 let currentVotes = {};
+let selectedQuestionIndex = -1; // For viewing stats
+let allQuestionVotes = {}; // Store votes for all questions
 
 // Initialize player checkboxes
 function initializePlayerCheckboxes() {
@@ -47,9 +49,23 @@ loadCurrentQuestion();
 
 // Socket events
 socket.on('votes-updated', (data) => {
-    if (data.questionId === getCurrentQuestionId()) {
-        currentVotes = data.votes;
-        updateVotesDisplay();
+    // Update votes for the question
+    const question = questions.find(q => q.id === data.questionId);
+    if (question) {
+        allQuestionVotes[data.questionId] = data.votes;
+        
+        // If this is the currently selected question, update display
+        if (selectedQuestionIndex >= 0 && questions[selectedQuestionIndex].id === data.questionId) {
+            currentVotes = data.votes;
+            updateVotesDisplay();
+        }
+        
+        // If this is the active question, update current votes
+        if (currentQuestionIndex >= 0 && questions[currentQuestionIndex].id === data.questionId) {
+            currentVotes = data.votes;
+        }
+        
+        updateStats();
     }
 });
 
@@ -62,7 +78,13 @@ socket.on('question-changed', (data) => {
     currentVotes = {};
     updateQuestionsList();
     updateCurrentQuestionDisplay();
-    updateVotesDisplay();
+    updateQuestionSelector();
+    updateStats();
+    
+    // If viewing the active question, refresh votes
+    if (selectedQuestionIndex === currentQuestionIndex) {
+        loadVotesForQuestion(currentQuestionIndex);
+    }
 });
 
 // Question form handling
@@ -102,10 +124,15 @@ document.getElementById('question-form').addEventListener('submit', async (e) =>
             // Reset all checkboxes to checked
             document.querySelectorAll('.player-checkbox').forEach(cb => cb.checked = true);
             updateQuestionsList();
+            updateQuestionSelector();
+            updateStats();
             
-            // Automatically set the new question as current
+            // Automatically set the new question as current and view it
             const newIndex = questions.length - 1;
+            selectedQuestionIndex = newIndex;
+            document.getElementById('question-selector').value = newIndex;
             await setCurrentQuestion(newIndex);
+            loadVotesForQuestion(newIndex);
         } else {
             alert('Failed to create question');
         }
@@ -125,16 +152,39 @@ document.getElementById('deselect-all-players-btn').addEventListener('click', ()
     document.querySelectorAll('.player-checkbox').forEach(cb => cb.checked = false);
 });
 
+// Question selector
+document.getElementById('question-selector').addEventListener('change', (e) => {
+    const index = parseInt(e.target.value);
+    if (index >= 0 && index < questions.length) {
+        selectedQuestionIndex = index;
+        loadVotesForQuestion(index);
+    } else {
+        selectedQuestionIndex = -1;
+        updateVotesDisplay();
+    }
+});
+
 // Question navigation
 document.getElementById('prev-question-btn').addEventListener('click', () => {
-    if (currentQuestionIndex > 0) {
-        setCurrentQuestion(currentQuestionIndex - 1);
+    if (selectedQuestionIndex > 0) {
+        selectedQuestionIndex--;
+        document.getElementById('question-selector').value = selectedQuestionIndex;
+        loadVotesForQuestion(selectedQuestionIndex);
     }
 });
 
 document.getElementById('next-question-btn').addEventListener('click', () => {
-    if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestion(currentQuestionIndex + 1);
+    if (selectedQuestionIndex < questions.length - 1) {
+        selectedQuestionIndex++;
+        document.getElementById('question-selector').value = selectedQuestionIndex;
+        loadVotesForQuestion(selectedQuestionIndex);
+    }
+});
+
+// Set as active button
+document.getElementById('set-active-btn').addEventListener('click', () => {
+    if (selectedQuestionIndex >= 0) {
+        setCurrentQuestion(selectedQuestionIndex);
     }
 });
 
@@ -144,6 +194,13 @@ async function loadQuestions() {
         const response = await fetch('/api/questions');
         questions = await response.json();
         updateQuestionsList();
+        updateQuestionSelector();
+        updateStats();
+        
+        // Load votes for all questions
+        questions.forEach((q, index) => {
+            loadVotesForQuestion(index, false);
+        });
     } catch (error) {
         console.error('Error loading questions:', error);
     }
@@ -155,10 +212,15 @@ async function loadCurrentQuestion() {
         const response = await fetch('/api/current-question');
         const data = await response.json();
         currentQuestionIndex = data.index;
+        updateQuestionSelector();
         updateCurrentQuestionDisplay();
+        updateStats();
         
+        // If there's a current question, select it for viewing
         if (currentQuestionIndex >= 0) {
-            loadVotes();
+            selectedQuestionIndex = currentQuestionIndex;
+            document.getElementById('question-selector').value = currentQuestionIndex;
+            loadVotesForQuestion(currentQuestionIndex);
         }
     } catch (error) {
         console.error('Error loading current question:', error);
@@ -179,8 +241,15 @@ async function setCurrentQuestion(index) {
         if (response.ok) {
             currentQuestionIndex = index;
             currentVotes = {};
+            updateQuestionsList();
+            updateQuestionSelector();
             updateCurrentQuestionDisplay();
-            updateVotesDisplay();
+            updateStats();
+            
+            // If viewing this question, refresh votes
+            if (selectedQuestionIndex === index) {
+                loadVotesForQuestion(index);
+            }
         } else {
             alert('Failed to set current question');
         }
@@ -190,17 +259,29 @@ async function setCurrentQuestion(index) {
     }
 }
 
-// Load votes for current question
-async function loadVotes() {
-    const questionId = getCurrentQuestionId();
-    if (!questionId) return;
+// Load votes for a specific question
+async function loadVotesForQuestion(index, updateDisplay = true) {
+    if (index < 0 || index >= questions.length) return;
     
+    const question = questions[index];
     try {
-        const response = await fetch(`/api/votes/${questionId}`);
-        currentVotes = await response.json();
-        updateVotesDisplay();
+        const response = await fetch(`/api/votes/${question.id}`);
+        const votes = await response.json();
+        allQuestionVotes[question.id] = votes;
+        
+        if (updateDisplay) {
+            currentVotes = votes;
+            updateVotesDisplay();
+        }
     } catch (error) {
         console.error('Error loading votes:', error);
+    }
+}
+
+// Load votes for current question (legacy function)
+async function loadVotes() {
+    if (selectedQuestionIndex >= 0) {
+        loadVotesForQuestion(selectedQuestionIndex);
     }
 }
 
@@ -212,7 +293,28 @@ function getCurrentQuestionId() {
     return null;
 }
 
-// Update questions list display
+// Update question selector dropdown
+function updateQuestionSelector() {
+    const selector = document.getElementById('question-selector');
+    selector.innerHTML = '<option value="-1">-- Select a Question --</option>';
+    
+    questions.forEach((question, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${index + 1}. ${question.question}`;
+        if (index === currentQuestionIndex) {
+            option.textContent += ' (Active)';
+        }
+        selector.appendChild(option);
+    });
+    
+    // Set selected value if viewing a question
+    if (selectedQuestionIndex >= 0 && selectedQuestionIndex < questions.length) {
+        selector.value = selectedQuestionIndex;
+    }
+}
+
+// Update questions list display (compact version)
 function updateQuestionsList() {
     const container = document.getElementById('questions-list');
     container.innerHTML = '';
@@ -224,21 +326,32 @@ function updateQuestionsList() {
     
     questions.forEach((question, index) => {
         const item = document.createElement('div');
-        item.className = `question-item ${index === currentQuestionIndex ? 'current' : ''}`;
+        item.className = `question-item-compact ${index === currentQuestionIndex ? 'current' : ''}`;
         const isCurrent = index === currentQuestionIndex;
+        const votes = allQuestionVotes[question.id] || {};
+        const totalVotes = Object.values(votes).reduce((sum, count) => sum + count, 0);
+        
         item.innerHTML = `
             <div class="question-item-content">
-                <h3>${question.question}</h3>
-                <p>${question.answers.length} answer(s) ${isCurrent ? '<strong style="color: #006633;">(Currently Active)</strong>' : ''}</p>
+                <h3>${index + 1}. ${question.question}</h3>
+                <p>${question.answers.length} players | ${totalVotes} votes ${isCurrent ? '<strong style="color: #006633;">(Active)</strong>' : ''}</p>
             </div>
             <div class="question-item-actions">
-                ${!isCurrent ? `<button class="activate-question-btn" onclick="activateQuestion(${index})">Set as Active</button>` : ''}
+                <button class="view-question-btn" onclick="viewQuestion(${index})">View Stats</button>
+                ${!isCurrent ? `<button class="activate-question-btn" onclick="activateQuestion(${index})">Set Active</button>` : ''}
                 <button class="delete-question-btn" onclick="deleteQuestion('${question.id}')">Delete</button>
             </div>
         `;
         container.appendChild(item);
     });
 }
+
+// View question stats
+window.viewQuestion = function(index) {
+    selectedQuestionIndex = index;
+    document.getElementById('question-selector').value = index;
+    loadVotesForQuestion(index);
+};
 
 // Activate question (set as current)
 window.activateQuestion = async function(index) {
@@ -258,6 +371,7 @@ window.deleteQuestion = async function(questionId) {
         
         if (response.ok) {
             questions = questions.filter(q => q.id !== questionId);
+            delete allQuestionVotes[questionId];
             
             // Adjust current question index if needed
             if (currentQuestionIndex >= questions.length) {
@@ -267,8 +381,21 @@ window.deleteQuestion = async function(questionId) {
                 } else {
                     await setCurrentQuestion(-1);
                 }
+            }
+            
+            // Adjust selected question index
+            if (selectedQuestionIndex >= questions.length) {
+                selectedQuestionIndex = questions.length - 1;
+            }
+            
+            updateQuestionsList();
+            updateQuestionSelector();
+            updateStats();
+            
+            if (selectedQuestionIndex >= 0 && selectedQuestionIndex < questions.length) {
+                loadVotesForQuestion(selectedQuestionIndex);
             } else {
-                updateQuestionsList();
+                updateVotesDisplay();
             }
         } else {
             alert('Failed to delete question');
@@ -285,53 +412,104 @@ function updateCurrentQuestionDisplay() {
     const prevBtn = document.getElementById('prev-question-btn');
     const nextBtn = document.getElementById('next-question-btn');
     
-    if (currentQuestionIndex < 0) {
-        display.textContent = 'No question selected';
+    if (selectedQuestionIndex < 0 || selectedQuestionIndex >= questions.length) {
+        display.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">Select a question to view statistics</p>';
         prevBtn.disabled = true;
         nextBtn.disabled = questions.length === 0;
     } else {
-        const question = questions[currentQuestionIndex];
-        display.textContent = `${currentQuestionIndex + 1} of ${questions.length}: ${question.question}`;
-        prevBtn.disabled = currentQuestionIndex === 0;
-        nextBtn.disabled = currentQuestionIndex === questions.length - 1;
+        const question = questions[selectedQuestionIndex];
+        const isActive = selectedQuestionIndex === currentQuestionIndex;
+        display.innerHTML = `
+            <div class="selected-question-info">
+                <h3>${question.question}</h3>
+                <p>Question ${selectedQuestionIndex + 1} of ${questions.length}</p>
+                ${isActive ? '<span class="active-badge">Currently Active</span>' : ''}
+            </div>
+        `;
+        prevBtn.disabled = selectedQuestionIndex === 0;
+        nextBtn.disabled = selectedQuestionIndex === questions.length - 1;
     }
 }
 
-// Update votes display
+// Update votes display with enhanced visualization
 function updateVotesDisplay() {
-    const container = document.getElementById('current-votes-display');
+    const container = document.getElementById('votes-display');
     
-    if (currentQuestionIndex < 0) {
-        container.innerHTML = '<p style="color: #666;">No question selected</p>';
+    if (selectedQuestionIndex < 0 || selectedQuestionIndex >= questions.length) {
+        container.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">Select a question from the dropdown to view vote distribution</p>';
         return;
     }
     
-    const question = questions[currentQuestionIndex];
+    const question = questions[selectedQuestionIndex];
     const totalVotes = Object.values(currentVotes).reduce((sum, count) => sum + count, 0);
     
     if (totalVotes === 0) {
-        container.innerHTML = '<p style="color: #666;">No votes yet</p>';
+        container.innerHTML = `
+            <div class="no-votes-message">
+                <p style="color: #666; text-align: center; padding: 40px; font-size: 1.1em;">
+                    No votes yet for this question
+                </p>
+            </div>
+        `;
         return;
     }
     
-    let html = `<h3 style="margin-bottom: 15px;">Votes (${totalVotes} total)</h3>`;
+    // Sort answers alphabetically by name, then by vote count for display
+    const sortedAnswers = question.answers
+        .map(answer => ({
+            ...answer,
+            count: currentVotes[answer.id] || 0,
+            percentage: totalVotes > 0 ? (currentVotes[answer.id] || 0) / totalVotes * 100 : 0
+        }))
+        .sort((a, b) => {
+            // First sort alphabetically by name
+            const nameCompare = a.text.localeCompare(b.text);
+            if (nameCompare !== 0) return nameCompare;
+            // If names are equal (shouldn't happen), sort by count
+            return b.count - a.count;
+        });
     
-    question.answers.forEach(answer => {
-        const count = currentVotes[answer.id] || 0;
-        const percentage = totalVotes > 0 ? (count / totalVotes * 100).toFixed(1) : 0;
-        
+    let html = `
+        <div class="votes-header">
+            <h3>Total Votes: <span class="vote-total">${totalVotes}</span></h3>
+        </div>
+        <div class="votes-chart">
+    `;
+    
+    sortedAnswers.forEach((answer, index) => {
+        const isTop = index === 0 && answer.count > 0;
         html += `
-            <div class="vote-item">
-                <div class="vote-item-text">${answer.text}</div>
-                <div class="vote-item-count">${count}</div>
-            </div>
-            <div class="vote-bar">
-                <div class="vote-bar-fill" style="width: ${percentage}%">${percentage}%</div>
+            <div class="vote-row ${isTop ? 'top-vote' : ''}">
+                <div class="vote-row-header">
+                    <span class="vote-player-name">${answer.text}</span>
+                    <span class="vote-count-badge">${answer.count} votes</span>
+                </div>
+                <div class="vote-bar-container">
+                    <div class="vote-bar" style="width: 100%;">
+                        <div class="vote-bar-fill" style="width: ${answer.percentage}%;">
+                            <span class="vote-percentage">${answer.percentage.toFixed(1)}%</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
     });
     
+    html += '</div>';
     container.innerHTML = html;
+}
+
+// Update stats cards
+function updateStats() {
+    document.getElementById('total-questions').textContent = questions.length;
+    document.getElementById('active-question-num').textContent = currentQuestionIndex >= 0 ? (currentQuestionIndex + 1) : '-';
+    
+    // Calculate total votes across all questions
+    let totalVotesAll = 0;
+    Object.values(allQuestionVotes).forEach(votes => {
+        totalVotesAll += Object.values(votes).reduce((sum, count) => sum + count, 0);
+    });
+    document.getElementById('total-votes-count').textContent = totalVotesAll;
 }
 
 // Load active users count
@@ -347,9 +525,17 @@ async function loadActiveUsers() {
 
 // Refresh votes periodically
 setInterval(() => {
-    if (currentQuestionIndex >= 0) {
-        loadVotes();
+    // Refresh votes for selected question
+    if (selectedQuestionIndex >= 0) {
+        loadVotesForQuestion(selectedQuestionIndex);
     }
+    
+    // Refresh all question votes
+    questions.forEach((q, index) => {
+        loadVotesForQuestion(index, false);
+    });
+    
+    updateStats();
 }, 2000);
 
 // Initial load

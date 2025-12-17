@@ -17,8 +17,58 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// UAM Men's Basketball Roster Players (alphabetically sorted)
+const UAM_PLAYERS = [
+    'Ashton Price',
+    'Bryson Hammond',
+    'Charles Temple',
+    'Elem Shelby',
+    'Felix Smedjeback',
+    'Giancarlo Bastianoni',
+    'Giancarlo Valdez',
+    'Gianssen Valdez',
+    'Isaac Jackson',
+    'Jackson Edwards',
+    'Jakob Zenon',
+    'Josh Smith',
+    'Lamont Jackson',
+    'Tyler Webb'
+];
+
+// Preprogrammed questions
+const PREPROGRAMMED_QUESTIONS = [
+    'Who is our best player when winning actually matters?',
+    'Who sets the standard every day—practice, film, weight room, everything?',
+    'Who is the best teammate on this team?',
+    'Who demands that we play the way we\'re coached?',
+    'Who holds teammates accountable in real time—not after the fact?',
+    'Who do you trust most in the last two minutes of a close game?',
+    'Who competes the hardest when things are going badly?',
+    'Who leads when the coaches aren\'t around?',
+    'Who is most coachable when the feedback is hard?',
+    'If we lost one person and our identity changed, who would that be?'
+];
+
+// Initialize questions with preprogrammed questions
+function initializeQuestions() {
+    return PREPROGRAMMED_QUESTIONS.map((question, index) => {
+        // Sort players alphabetically for each question
+        const sortedPlayers = [...UAM_PLAYERS].sort((a, b) => a.localeCompare(b));
+        
+        return {
+            id: `pre-${index}-${Date.now()}`,
+            question: question,
+            answers: sortedPlayers.map((player, answerIndex) => ({
+                id: answerIndex.toString(),
+                text: player
+            })),
+            createdAt: new Date().toISOString()
+        };
+    });
+}
+
 // In-memory storage
-let questions = [];
+let questions = initializeQuestions();
 let currentQuestionIndex = -1;
 let votes = {}; // { questionId: { answerId: count } }
 let activeUsers = new Set(); // Track users currently on the voting page
@@ -58,10 +108,13 @@ app.post('/api/questions', (req, res) => {
     return res.status(400).json({ error: 'Question and answers are required' });
   }
   
+  // Sort answers alphabetically
+  const sortedAnswers = [...answers].sort((a, b) => a.localeCompare(b));
+  
   const newQuestion = {
     id: Date.now().toString(),
     question,
-    answers: answers.map((answer, index) => ({
+    answers: sortedAnswers.map((answer, index) => ({
       id: index.toString(),
       text: answer
     })),

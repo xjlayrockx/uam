@@ -58,8 +58,9 @@ function updateDisplay() {
             voteStatus.textContent = 'Vote recorded! Waiting for next question...';
             voteStatus.style.display = 'block';
         } else {
-            // Show answer options
-            currentQuestion.answers.forEach(answer => {
+            // Show answer options (sorted alphabetically)
+            const sortedAnswers = [...currentQuestion.answers].sort((a, b) => a.text.localeCompare(b.text));
+            sortedAnswers.forEach(answer => {
                 const answerBtn = document.createElement('button');
                 answerBtn.className = 'answer-btn';
                 answerBtn.textContent = answer.text;

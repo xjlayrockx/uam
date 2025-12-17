@@ -19,37 +19,75 @@
         </div>
         
         <div class="admin-content">
-            <div class="admin-section">
-                <h2>Create New Question</h2>
-                <form id="question-form">
-                    <div class="form-group">
-                        <label for="question-input">Question:</label>
-                        <input type="text" id="question-input" placeholder="Enter your question" required>
+            <!-- Dashboard View -->
+            <div class="dashboard-grid">
+                <!-- Left Column: Question Management -->
+                <div class="dashboard-column">
+                    <div class="admin-section">
+                        <h2>Create New Question</h2>
+                        <form id="question-form">
+                            <div class="form-group">
+                                <label for="question-input">Question:</label>
+                                <input type="text" id="question-input" placeholder="Enter your question" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Select Players (Answers):</label>
+                                <div class="players-selection-info">Select which players should be answer options for this question</div>
+                                <div id="players-checkbox-container" class="players-checkbox-container"></div>
+                                <button type="button" id="select-all-players-btn" class="select-all-btn">Select All</button>
+                                <button type="button" id="deselect-all-players-btn" class="select-all-btn">Deselect All</button>
+                            </div>
+                            <button type="submit" class="submit-btn">Create Question</button>
+                        </form>
                     </div>
-                    <div class="form-group">
-                        <label>Select Players (Answers):</label>
-                        <div class="players-selection-info">Select which players should be answer options for this question</div>
-                        <div id="players-checkbox-container" class="players-checkbox-container"></div>
-                        <button type="button" id="select-all-players-btn" class="select-all-btn">Select All</button>
-                        <button type="button" id="deselect-all-players-btn" class="select-all-btn">Deselect All</button>
+                    
+                    <div class="admin-section">
+                        <h2>Question Control</h2>
+                        <div class="question-selector-group">
+                            <label for="question-selector">Select Question to View:</label>
+                            <select id="question-selector" class="question-selector">
+                                <option value="-1">-- Select a Question --</option>
+                            </select>
+                        </div>
+                        <div class="current-question-controls">
+                            <button id="prev-question-btn" class="control-btn">← Previous</button>
+                            <button id="set-active-btn" class="control-btn set-active-btn">Set as Active</button>
+                            <button id="next-question-btn" class="control-btn">Next →</button>
+                        </div>
+                        <div id="current-question-display" class="current-question-display"></div>
                     </div>
-                    <button type="submit" class="submit-btn">Create Question</button>
-                </form>
-            </div>
-            
-            <div class="admin-section">
-                <h2>Questions</h2>
-                <div id="questions-list"></div>
-            </div>
-            
-            <div class="admin-section">
-                <h2>Current Question Control</h2>
-                <div class="current-question-controls">
-                    <button id="prev-question-btn" class="control-btn">← Previous</button>
-                    <span id="current-question-display" class="current-question-display">No question selected</span>
-                    <button id="next-question-btn" class="control-btn">Next →</button>
+                    
+                    <div class="admin-section">
+                        <h2>All Questions</h2>
+                        <div id="questions-list" class="questions-list-compact"></div>
+                    </div>
                 </div>
-                <div id="current-votes-display" class="votes-display"></div>
+                
+                <!-- Right Column: Analytics Dashboard -->
+                <div class="dashboard-column">
+                    <div class="admin-section dashboard-stats">
+                        <h2>Vote Distribution</h2>
+                        <div id="votes-display" class="votes-display-enhanced"></div>
+                    </div>
+                    
+                    <div class="admin-section">
+                        <h2>Quick Stats</h2>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-label">Total Questions</div>
+                                <div class="stat-value" id="total-questions">0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Active Question</div>
+                                <div class="stat-value" id="active-question-num">-</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Total Votes</div>
+                                <div class="stat-value" id="total-votes-count">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
