@@ -3,6 +3,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
 const cors = require('cors');
+const XLSX = require('xlsx');
 
 const app = express();
 const server = http.createServer(app);
@@ -242,6 +243,139 @@ app.post('/api/full-reset', (req, res) => {
   });
   
   res.json({ success: true, message: 'Full reset completed', questions: questions });
+});
+
+// API: Export data to Excel
+app.get('/api/export-excel', (req, res) => {
+  try {
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    
+    // Summary sheet
+    const summaryData = [
+      ['UAM Live Voting - Export Summary'],
+      [''],
+      ['Export Date', new Date().toLocaleString()],
+      ['Total Questions', questions.length],
+      ['Active Question Index', currentQuestionIndex >= 0 ? currentQuestionIndex + 1 : 'None'],
+      ['Total Active Users', activeUsers.size],
+      ['']
+    ];
+    
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+    
+    // Questions and votes sheet
+    const questionsData = [
+      ['Question #', 'Question', 'Answer (Player)', 'Votes', 'Percentage', 'Total Votes for Question']
+    ];
+    
+    questions.forEach((question, qIndex) => {
+      const questionVotes = votes[question.id] || {};
+      const totalVotes = Object.values(questionVotes).reduce((sum, count) => sum + count, 0);
+      
+      // Sort answers alphabetically
+      const sortedAnswers = [...question.answers].sort((a, b) => a.text.localeCompare(b.text));
+      
+      sortedAnswers.forEach((answer, aIndex) => {
+        const voteCount = questionVotes[answer.id] || 0;
+        const percentage = totalVotes > 0 ? ((voteCount / totalVotes) * 100).toFixed(2) + '%' : '0%';
+        
+        questionsData.push([
+          qIndex === 0 ? question.question : '', // Only show question in first row
+          qIndex === 0 ? '' : '', // Empty column for alignment
+          answer.text,
+          voteCount,
+          percentage,
+          qIndex === 0 ? totalVotes : '' // Only show total in first row
+        ]);
+      });
+      
+      // Add empty row between questions
+      if (qIndex < questions.length - 1) {
+        questionsData.push(['', '', '', '', '', '']);
+      }
+    });
+    
+    const questionsSheet = XLSX.utils.aoa_to_sheet(questionsData);
+    
+    // Set column widths
+    questionsSheet['!cols'] = [
+      { wch: 15 }, // Question #
+      { wch: 60 }, // Question
+      { wch: 25 }, // Answer (Player)
+      { wch: 10 }, // Votes
+      { wch: 12 }, // Percentage
+      { wch: 20 }  // Total Votes
+    ];
+    
+    XLSX.utils.book_append_sheet(workbook, questionsSheet, 'Questions & Votes');
+    
+    // Detailed breakdown sheet (one per question)
+    questions.forEach((question, qIndex) => {
+      const questionVotes = votes[question.id] || {};
+      const totalVotes = Object.values(questionVotes).reduce((sum, count) => sum + count, 0);
+      
+      const detailData = [
+        [`Question ${qIndex + 1}: ${question.question}`],
+        [''],
+        ['Total Votes', totalVotes],
+        [''],
+        ['Player', 'Votes', 'Percentage', 'Rank']
+      ];
+      
+      // Sort answers by vote count (descending) for ranking
+      const sortedAnswers = question.answers
+        .map(answer => ({
+          ...answer,
+          count: questionVotes[answer.id] || 0
+        }))
+        .sort((a, b) => {
+          // First by vote count (descending)
+          if (b.count !== a.count) return b.count - a.count;
+          // Then alphabetically
+          return a.text.localeCompare(b.text);
+        });
+      
+      sortedAnswers.forEach((answer, rank) => {
+        const voteCount = answer.count;
+        const percentage = totalVotes > 0 ? ((voteCount / totalVotes) * 100).toFixed(2) + '%' : '0%';
+        
+        detailData.push([
+          answer.text,
+          voteCount,
+          percentage,
+          rank + 1
+        ]);
+      });
+      
+      const detailSheet = XLSX.utils.aoa_to_sheet(detailData);
+      detailSheet['!cols'] = [
+        { wch: 30 }, // Player
+        { wch: 10 }, // Votes
+        { wch: 12 }, // Percentage
+        { wch: 8 }   // Rank
+      ];
+      
+      // Use question number as sheet name (Excel sheet names are limited)
+      const sheetName = `Q${qIndex + 1}`.substring(0, 31); // Excel limit is 31 chars
+      XLSX.utils.book_append_sheet(workbook, detailSheet, sheetName);
+    });
+    
+    // Generate Excel file buffer
+    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    
+    // Set response headers
+    const filename = `UAM_Voting_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
+    // Send file
+    res.send(excelBuffer);
+  } catch (error) {
+    console.error('Error exporting to Excel:', error);
+    res.status(500).json({ error: 'Failed to export data to Excel' });
+  }
 });
 
 // Socket.io connection handling

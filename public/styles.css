@@ -862,6 +862,40 @@ body {
     transform: translateY(-1px);
 }
 
+/* Export Section */
+.export-description {
+    color: var(--uam-text-light);
+    font-size: 0.9em;
+    margin-bottom: 15px;
+}
+
+.export-btn {
+    width: 100%;
+    padding: 15px 20px;
+    background: var(--uam-green);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.export-btn:hover {
+    background: var(--uam-dark-green);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 102, 51, 0.3);
+}
+
+.export-btn:active {
+    transform: translateY(0);
+}
+
 /* Mobile Responsive */
 @media (max-width: 1200px) {
     .dashboard-grid {

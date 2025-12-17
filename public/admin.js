@@ -682,6 +682,17 @@ socket.on('full-reset', (data) => {
     document.getElementById('question-selector').value = '-1';
 });
 
+// Export to Excel
+document.getElementById('export-excel-btn').addEventListener('click', () => {
+    // Create a link and trigger download
+    const link = document.createElement('a');
+    link.href = '/api/export-excel';
+    link.download = `UAM_Voting_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+});
+
 // Initial load
 loadActiveUsers();
 
