@@ -200,6 +200,50 @@ app.get('/api/active-users', (req, res) => {
   res.json({ count: activeUsers.size });
 });
 
+// API: Clear all votes
+app.post('/api/clear-votes', (req, res) => {
+  votes = {};
+  userVotes = {};
+  
+  // Broadcast to all clients that votes are cleared
+  io.emit('votes-cleared', {});
+  
+  res.json({ success: true, message: 'All votes cleared' });
+});
+
+// API: Reset questions to preprogrammed
+app.post('/api/reset-questions', (req, res) => {
+  questions = initializeQuestions();
+  votes = {};
+  userVotes = {};
+  currentQuestionIndex = -1;
+  
+  // Broadcast to all clients
+  io.emit('questions-reset', {
+    questions: questions,
+    index: currentQuestionIndex
+  });
+  
+  res.json({ success: true, message: 'Questions reset to preprogrammed', questions: questions });
+});
+
+// API: Full reset (clear everything)
+app.post('/api/full-reset', (req, res) => {
+  questions = initializeQuestions();
+  votes = {};
+  userVotes = {};
+  currentQuestionIndex = -1;
+  activeUsers.clear();
+  
+  // Broadcast to all clients
+  io.emit('full-reset', {
+    questions: questions,
+    index: currentQuestionIndex
+  });
+  
+  res.json({ success: true, message: 'Full reset completed', questions: questions });
+});
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);

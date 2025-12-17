@@ -538,6 +538,150 @@ setInterval(() => {
     updateStats();
 }, 2000);
 
+// Clear data functions
+document.getElementById('clear-votes-btn').addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to clear ALL votes? This cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/clear-votes', {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            currentVotes = {};
+            allQuestionVotes = {};
+            updateVotesDisplay();
+            updateStats();
+            updateQuestionsList();
+            alert('All votes have been cleared.');
+        } else {
+            alert('Failed to clear votes');
+        }
+    } catch (error) {
+        console.error('Error clearing votes:', error);
+        alert('Error clearing votes');
+    }
+});
+
+document.getElementById('reset-questions-btn').addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to reset all questions to preprogrammed? This will clear all votes and custom questions.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/reset-questions', {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            questions = data.questions;
+            currentQuestionIndex = -1;
+            selectedQuestionIndex = -1;
+            currentVotes = {};
+            allQuestionVotes = {};
+            
+            updateQuestionsList();
+            updateQuestionSelector();
+            updateCurrentQuestionDisplay();
+            updateVotesDisplay();
+            updateStats();
+            
+            document.getElementById('question-selector').value = '-1';
+            
+            alert('Questions have been reset to preprogrammed.');
+        } else {
+            alert('Failed to reset questions');
+        }
+    } catch (error) {
+        console.error('Error resetting questions:', error);
+        alert('Error resetting questions');
+    }
+});
+
+document.getElementById('full-reset-btn').addEventListener('click', async () => {
+    if (!confirm('⚠️ FULL RESET: This will clear ALL data including votes, questions, and reset to preprogrammed questions. This cannot be undone. Are you absolutely sure?')) {
+        return;
+    }
+    
+    if (!confirm('This is your last chance. This will delete everything. Continue?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/full-reset', {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            questions = data.questions;
+            currentQuestionIndex = -1;
+            selectedQuestionIndex = -1;
+            currentVotes = {};
+            allQuestionVotes = {};
+            
+            updateQuestionsList();
+            updateQuestionSelector();
+            updateCurrentQuestionDisplay();
+            updateVotesDisplay();
+            updateStats();
+            
+            document.getElementById('question-selector').value = '-1';
+            
+            alert('Full reset completed. All data has been cleared.');
+        } else {
+            alert('Failed to perform full reset');
+        }
+    } catch (error) {
+        console.error('Error performing full reset:', error);
+        alert('Error performing full reset');
+    }
+});
+
+// Handle server-side reset events
+socket.on('votes-cleared', () => {
+    currentVotes = {};
+    allQuestionVotes = {};
+    updateVotesDisplay();
+    updateStats();
+    updateQuestionsList();
+});
+
+socket.on('questions-reset', (data) => {
+    questions = data.questions;
+    currentQuestionIndex = data.index;
+    selectedQuestionIndex = -1;
+    currentVotes = {};
+    allQuestionVotes = {};
+    
+    updateQuestionsList();
+    updateQuestionSelector();
+    updateCurrentQuestionDisplay();
+    updateVotesDisplay();
+    updateStats();
+    
+    document.getElementById('question-selector').value = '-1';
+});
+
+socket.on('full-reset', (data) => {
+    questions = data.questions;
+    currentQuestionIndex = data.index;
+    selectedQuestionIndex = -1;
+    currentVotes = {};
+    allQuestionVotes = {};
+    
+    updateQuestionsList();
+    updateQuestionSelector();
+    updateCurrentQuestionDisplay();
+    updateVotesDisplay();
+    updateStats();
+    
+    document.getElementById('question-selector').value = '-1';
+});
+
 // Initial load
 loadActiveUsers();
 
