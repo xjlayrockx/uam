@@ -35,18 +35,44 @@ const UAM_PLAYERS = [
     'Tyler Webb'
 ];
 
-// Preprogrammed questions
-const PREPROGRAMMED_QUESTIONS = [
-    'Who is our best player when winning actually matters?',
-    'Who sets the standard every day—practice, film, weight room, everything?',
-    'Who is the best teammate on this team?',
-    'Who demands that we play the way we\'re coached?',
-    'Who holds teammates accountable in real time—not after the fact?',
+// Preprogrammed questions - Ordered to match speech flow: "KNOW WHO YOU ARE"
+// Group 1: Impact Under Pressure - "Who are we when it matters?"
+const GROUP_1_QUESTIONS = [
+    'Who is our best player when winning actually matters? (Not talent. Impact.)',
     'Who do you trust most in the last two minutes of a close game?',
-    'Who competes the hardest when things are going badly?',
-    'Who leads when the coaches aren\'t around?',
-    'Who is most coachable when the feedback is hard?',
+    'Who competes the hardest when things are going badly?'
+];
+
+// Group 2: Standards & Accountability - "Who protects the culture?"
+const GROUP_2_QUESTIONS = [
+    'Who sets the standard every day—practice, film, weight room, everything?',
+    'Who demands that we play the way we\'re coached?',
+    'Who holds teammates accountable in real time—not after the fact?'
+];
+
+// Group 3: Team-First Identity - "Who makes others better?"
+const GROUP_3_QUESTIONS = [
+    'Who is the best teammate on this team?',
+    'Who leads when the coaches aren\'t around?'
+];
+
+// Group 4: Growth & Humility - "Who is still becoming?"
+const GROUP_4_QUESTIONS = [
+    'Who is most coachable when the feedback is hard?'
+];
+
+// Group 5: Identity Check - "The most important question"
+const GROUP_5_QUESTIONS = [
     'If we lost one person and our identity changed, who would that be?'
+];
+
+// Combine all questions in speech flow order
+const PREPROGRAMMED_QUESTIONS = [
+    ...GROUP_1_QUESTIONS,
+    ...GROUP_2_QUESTIONS,
+    ...GROUP_3_QUESTIONS,
+    ...GROUP_4_QUESTIONS,
+    ...GROUP_5_QUESTIONS
 ];
 
 // Initialize questions with preprogrammed questions
